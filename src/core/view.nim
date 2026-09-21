@@ -1,8 +1,8 @@
 ## view.nim - Base View component with layout, scrolling, and input handlers
-## Ports data/core/view.lua to Nim with structured OOP methods.
+## Ports data/core/view.lua to Nim.
 
 import std/math
-import objects, common, style
+import objects, common, style, renderer
 
 type
   ScrollState* = object
@@ -103,12 +103,13 @@ method clampScrollPosition*(self: View) {.base.} =
     self.scroll.toY = clamp(self.scroll.toY, 0.0, maxScroll)
 
 method drawBackground*(self: View, color: Color) {.base.} =
-  discard
+  renderer.drawRect(initRect(self.position.x, self.position.y, self.size.x, self.size.y), color)
 
 method drawScrollbar*(self: View) {.base.} =
   let r = self.getScrollbarRect()
   if r.width > 0 and r.height > 0:
-    discard
+    let color = if self.hoveredScrollbar or self.draggingScrollbar: defaultStyle.scrollbar2 else: defaultStyle.scrollbar
+    renderer.drawRect(r, color)
 
 method update*(self: View): bool {.base.} =
   self.clampScrollPosition()

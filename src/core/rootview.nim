@@ -1,7 +1,7 @@
 ## rootview.nim - Root top-level view orchestration and node tree layout container
 ## Ports data/core/rootview.lua to Nim.
 
-import view, node, doc, docview, common
+import view, node, doc, docview, common, renderer
 
 type
   RootView* = ref object of View
@@ -29,8 +29,11 @@ proc openDoc*(self: RootView, doc: Doc): DocView =
   return dv
 
 method draw*(self: RootView) =
+  renderer.setClipRect(initRect(self.position.x, self.position.y, self.size.x, self.size.y))
   if self.rootNode != nil:
     self.rootNode.updateLayout()
+    if self.rootNode.activeView != nil:
+      self.rootNode.activeView.draw()
 
 method update*(self: RootView): bool =
   self.rootNode.position = self.position

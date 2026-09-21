@@ -2,7 +2,7 @@
 ## Ports data/core/logview.lua to Nim.
 
 import std/times
-import view, style
+import view, style, renderer
 
 type
   LogItem* = object
@@ -34,6 +34,14 @@ proc addLogItem*(self: LogView, text: string, at: string = "", info: string = ""
 
 method draw*(self: LogView) =
   self.drawBackground(defaultStyle.background)
+  let font = defaultStyle.font
+  var curY = self.position.y + defaultStyle.padding.y + self.yOffset
+  for item in self.items:
+    var curX = self.position.x + defaultStyle.padding.x
+    curX = renderer.drawText(font, item.text, curX, curY, defaultStyle.text)
+    if item.at.len > 0:
+      discard renderer.drawText(font, " at " & item.at, curX + defaultStyle.padding.x, curY, defaultStyle.dim)
+    curY += 20.0
   self.drawScrollbar()
 
 method update*(self: LogView): bool =

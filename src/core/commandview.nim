@@ -2,7 +2,7 @@
 ## Ports data/core/commandview.lua to Nim.
 
 import std/strutils
-import doc, docview, view, common
+import doc, docview, view, common, style, renderer
 
 type
   SuggestionItem* = object
@@ -88,7 +88,22 @@ proc submit*(self: CommandView) =
     submitFn(currentText, sug)
 
 proc drawSuggestionsBox*(self: CommandView) =
-  discard
+  if self.suggestions.len > 0:
+    let font = defaultStyle.font
+    let itemH = 20.0
+    let boxH = min(10.0, float(self.suggestions.len)) * itemH
+    let boxY = self.position.y - boxH
+    renderer.drawRect(initRect(self.position.x, boxY, self.size.x, boxH), defaultStyle.background3)
+
+    var curY = boxY
+    for i, item in self.suggestions:
+      if curY >= boxY + boxH: break
+      let color = if i + 1 == self.suggestionIdx: defaultStyle.accent else: defaultStyle.text
+      discard renderer.drawText(font, item.text, self.position.x + defaultStyle.padding.x, curY, color)
+      if item.info.len > 0:
+        let infoX = self.position.x + self.size.x - float(item.info.len) * 8.0 - defaultStyle.padding.x
+        discard renderer.drawText(font, item.info, infoX, curY, defaultStyle.dim)
+      curY += itemH
 
 method draw*(self: CommandView) =
   procCall draw(DocView(self))

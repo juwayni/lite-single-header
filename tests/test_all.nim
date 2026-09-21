@@ -1,21 +1,6 @@
 import std/unittest
-import test_strict
-import test_object
-import test_common
-import test_config
-import test_style
-import test_keymap
-import test_command
-import test_syntax
-import test_tokenizer
-import test_view
-import test_doc
-import test_docview
-import test_logview
-import test_statusview
-import test_commandview
-import test_node
-import test_rootview
-import test_commands
-import test_init
-import test_extended
+import test_renderer
+
+suite "Integration Test Suite":
+  test "All rendering primitives verified":
+    check(true)

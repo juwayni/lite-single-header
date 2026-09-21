@@ -1,8 +1,8 @@
 ## docview.nim - Document view editor renderer, selections, line highlights, and cursor navigation
 ## Ports data/core/docview.lua to Nim.
 
-import std/math
-import common, config, style, view, doc
+import std/[math, tables]
+import ./common, ./config, ./style, ./view, ./doc, ./tokenizer, ./renderer
 
 type
   DocView* = ref object of View
@@ -69,16 +69,35 @@ proc scrollToMakeVisible*(self: DocView, line, col: int) =
   self.scroll.toY = max(self.scroll.toY, maxY)
 
 proc drawLineGutter*(self: DocView, lineIdx: int, x, y: float) =
+  let font = defaultStyle.font
+  let color = defaultStyle.lineNumber
   let lineNumStr = $lineIdx
-  discard lineNumStr
+  discard renderer.drawText(font, lineNumStr, x + defaultStyle.padding.x, y, color)
 
 proc drawLineText*(self: DocView, lineIdx: int, x, y: float) =
   if self.doc != nil:
+    let font = defaultStyle.codeFont
     let hl = self.doc.getHighlightedLine(lineIdx)
+    var curX = x
     for tok in hl.tokens:
-      discard tok
+      let tokColor = defaultStyle.syntax.getOrDefault(tok.tokenType, defaultStyle.text)
+      curX = renderer.drawText(font, tok.text, curX, y, tokColor)
 
 proc drawLineBody*(self: DocView, lineIdx: int, x, y: float) =
+  if self.doc != nil:
+    let lh = self.getLineHeight()
+    for sel in self.doc.selections:
+      if sel.line1 <= lineIdx and sel.line2 >= lineIdx:
+        if sel.line1 == sel.line2 and sel.col1 == sel.col2:
+          if sel.line1 == lineIdx:
+            let caretX = x + float(sel.col1 - 1) * 8.0
+            renderer.drawRect(initRect(caretX, y, defaultStyle.caretWidth, lh), defaultStyle.caret)
+        else:
+          let selX1 = if sel.line1 == lineIdx: x + float(sel.col1 - 1) * 8.0 else: x
+          let lineLen = if lineIdx <= self.doc.lines.len: self.doc.lines[lineIdx - 1].len else: 1
+          let selX2 = if sel.line2 == lineIdx: x + float(sel.col2 - 1) * 8.0 else: x + float(lineLen) * 8.0
+          renderer.drawRect(initRect(selX1, y, max(1.0, selX2 - selX1), lh), defaultStyle.selection)
+
   self.drawLineText(lineIdx, x, y)
 
 method draw*(self: DocView) =

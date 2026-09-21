@@ -1,12 +1,9 @@
-## node.nim - Split UI layout tree node and view container
-## Ports data/core/node.lua to Nim.
-
+## node.nim - Split layout node
 import std/math
 import objects, common, view
 
 type
-  NodeType* = enum
-    ntLeaf, ntHSplit, ntVSplit
+  NodeType* = enum ntLeaf, ntHSplit, ntVSplit
 
   Node* = ref object of Object
     nodeType*: NodeType
@@ -16,22 +13,10 @@ type
     activeView*: View
     divider*: float
     locked*: bool
-    childA*: Node
-    childB*: Node
+    childA*, childB*: Node
 
 proc newNode*(nodeType: NodeType = ntLeaf): Node =
-  let n = Node(
-    typeName: "Node",
-    nodeType: nodeType,
-    position: initVec2(0.0, 0.0),
-    size: initVec2(0.0, 0.0),
-    views: @[],
-    activeView: nil,
-    divider: 0.5,
-    locked: false,
-    childA: nil,
-    childB: nil
-  )
+  let n = Node(typeName: "Node", nodeType: nodeType, position: initVec2(0, 0), size: initVec2(0, 0), views: @[], activeView: nil, divider: 0.5, locked: false)
   if nodeType == ntLeaf:
     let emptyV = newView("EmptyView")
     n.views.add(emptyV)
@@ -40,38 +25,23 @@ proc newNode*(nodeType: NodeType = ntLeaf): Node =
 
 proc addView*(self: Node, view: View) =
   if self.nodeType == ntLeaf and not self.locked:
-    if self.views.len == 1 and self.views[0].typeName == "EmptyView":
-      self.views = @[]
+    if self.views.len == 1 and self.views[0].typeName == "EmptyView": self.views = @[]
     self.views.add(view)
     self.activeView = view
 
 proc setActiveView*(self: Node, view: View) =
-  if self.nodeType == ntLeaf:
-    self.activeView = view
+  if self.nodeType == ntLeaf: self.activeView = view
 
 proc split*(self: Node, dir: string, view: View = nil, locked: bool = false): Node =
   let splitType = if dir in ["up", "down"]: ntVSplit else: ntHSplit
   let oldA = newNode(self.nodeType)
-  oldA.views = self.views
-  oldA.activeView = self.activeView
-  oldA.divider = self.divider
-
+  oldA.views = self.views; oldA.activeView = self.activeView; oldA.divider = self.divider
   let newB = newNode(ntLeaf)
-  if view != nil:
-    newB.addView(view)
+  if view != nil: newB.addView(view)
   newB.locked = locked
-
-  self.nodeType = splitType
-  self.views = @[]
-  self.activeView = nil
-
-  if dir in ["up", "left"]:
-    self.childA = newB
-    self.childB = oldA
-  else:
-    self.childA = oldA
-    self.childB = newB
-
+  self.nodeType = splitType; self.views = @[]; self.activeView = nil
+  if dir in ["up", "left"]: self.childA = newB; self.childB = oldA
+  else: self.childA = oldA; self.childB = newB
   return newB
 
 proc updateLayout*(self: Node) =
@@ -83,23 +53,9 @@ proc updateLayout*(self: Node) =
     if self.nodeType == ntHSplit:
       let splitX = floor(self.size.x * self.divider)
       if self.childA != nil:
-        self.childA.position = self.position
-        self.childA.size = initVec2(splitX, self.size.y)
-        self.childA.updateLayout()
+        self.childA.position = self.position; self.childA.size = initVec2(splitX, self.size.y); self.childA.updateLayout()
       if self.childB != nil:
-        self.childB.position = initVec2(self.position.x + splitX, self.position.y)
-        self.childB.size = initVec2(self.size.x - splitX, self.size.y)
-        self.childB.updateLayout()
-    elif self.nodeType == ntVSplit:
-      let splitY = floor(self.size.y * self.divider)
-      if self.childA != nil:
-        self.childA.position = self.position
-        self.childA.size = initVec2(self.size.x, splitY)
-        self.childA.updateLayout()
-      if self.childB != nil:
-        self.childB.position = initVec2(self.position.x, self.position.y + splitY)
-        self.childB.size = initVec2(self.size.x, self.size.y - splitY)
-        self.childB.updateLayout()
+        self.childB.position = initVec2(self.position.x + splitX, self.position.y); self.childB.size = initVec2(self.size.x - splitX, self.size.y); self.childB.updateLayout()
 
 method update*(self: Node): bool {.base.} =
   var changed = false

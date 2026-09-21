@@ -2,7 +2,7 @@
 ## Ports data/core/statusview.lua to Nim.
 
 import std/times
-import view, common, style
+import view, common, style, renderer
 
 type
   StatusView* = ref object of View
@@ -39,6 +39,14 @@ proc removeTooltip*(self: StatusView) =
 
 method draw*(self: StatusView) =
   self.drawBackground(defaultStyle.background2)
+  let font = defaultStyle.font
+  let y = self.position.y + defaultStyle.padding.y
+  var x = self.position.x + defaultStyle.padding.x
+
+  if self.tooltipMode and self.tooltip.len > 0:
+    discard renderer.drawText(font, self.tooltip, x, y, defaultStyle.text)
+  elif epochTime() < self.messageTimeout and self.message.len > 0:
+    discard renderer.drawText(font, self.message, x, y, defaultStyle.accent)
 
 method update*(self: StatusView): bool =
   self.size.y = defaultStyle.font.size + defaultStyle.padding.y * 2.0
