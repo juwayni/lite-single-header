@@ -1,5 +1,5 @@
 import std/[unittest, tables]
-import ../src/core/[config, style, keymap, command, doc, docview, rootview, commandview]
+import ../src/core/[config, style, keymap, command, rootview]
 import ../src/languages/[languages_c, languages_web_script, languages_other]
 import ../src/themes/[themes_dark, themes_light]
 import ../src/plugins/[plugins_nav, plugins_edit, plugins_ui]

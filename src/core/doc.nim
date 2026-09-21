@@ -103,6 +103,12 @@ proc setSelection*(doc: Doc, line1, col1: int, line2: int = 0, col2: int = 0) =
   let (sl1, sc1, sl2, sc2) = sortPositions(line1, col1, l2, c2)
   doc.selections = @[Selection(line1: sl1, col1: sc1, line2: sl2, col2: sc2)]
 
+proc hasSelection*(doc: Doc): bool =
+  for s in doc.selections:
+    if s.line1 != s.line2 or s.col1 != s.col2:
+      return true
+  return false
+
 proc getHighlightedLine*(doc: Doc, lineIdx: int): HighlightedLine =
   let (l, _) = doc.sanitizePosition(lineIdx, 1)
   if l <= doc.highlightedLines.len and doc.highlightedLines[l - 1].text == doc.lines[l - 1]:
@@ -199,6 +205,41 @@ proc remove*(doc: Doc, line1, col1, line2, col2: int) =
   let text = doc.getText(l1, c1, l2, c2)
   doc.undoStack.add(UndoRecord(actionType: uaRemove, time: cpuTime(), line1: l1, col1: c1, line2: l2, col2: c2, text: text, selections: doc.selections))
   doc.rawRemove(l1, c1, l2, c2)
+
+proc textInput*(doc: Doc, text: string) =
+  if doc.selections.len == 0:
+    doc.setSelection(1, 1)
+  for i in countdown(doc.selections.len - 1, 0):
+    let sel = doc.selections[i]
+    if sel.line1 != sel.line2 or sel.col1 != sel.col2:
+      doc.remove(sel.line1, sel.col1, sel.line2, sel.col2)
+    doc.insert(sel.line1, sel.col1, text)
+    let (endL, endC) = calcEndPosition(sel.line1, sel.col1, text)
+    doc.selections[i] = Selection(line1: endL, col1: endC, line2: endL, col2: endC)
+
+proc deleteToCursor*(doc: Doc, dirCol: int = -1) =
+  for i in countdown(doc.selections.len - 1, 0):
+    let sel = doc.selections[i]
+    if sel.line1 != sel.line2 or sel.col1 != sel.col2:
+      doc.remove(sel.line1, sel.col1, sel.line2, sel.col2)
+      doc.selections[i] = Selection(line1: sel.line1, col1: sel.col1, line2: sel.line1, col2: sel.col1)
+    else:
+      let targetCol = max(1, sel.col1 + dirCol)
+      doc.remove(sel.line1, min(sel.col1, targetCol), sel.line1, max(sel.col1, targetCol))
+      let newC = min(sel.col1, targetCol)
+      doc.selections[i] = Selection(line1: sel.line1, col1: newC, line2: sel.line1, col2: newC)
+
+proc moveToCursor*(doc: Doc, dirLine: int, dirCol: int) =
+  for i in 0 ..< doc.selections.len:
+    let sel = doc.selections[i]
+    let (newL, newC) = doc.sanitizePosition(sel.line1 + dirLine, sel.col1 + dirCol)
+    doc.selections[i] = Selection(line1: newL, col1: newC, line2: newL, col2: newC)
+
+proc selectToCursor*(doc: Doc, dirLine: int, dirCol: int) =
+  for i in 0 ..< doc.selections.len:
+    let sel = doc.selections[i]
+    let (newL, newC) = doc.sanitizePosition(sel.line1 + dirLine, sel.col1 + dirCol)
+    doc.selections[i] = Selection(line1: newL, col1: newC, line2: sel.line2, col2: sel.col2)
 
 proc undo*(doc: Doc) =
   if doc.undoStack.len > 0:

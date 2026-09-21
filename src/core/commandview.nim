@@ -2,7 +2,7 @@
 ## Ports data/core/commandview.lua to Nim.
 
 import std/strutils
-import doc, docview, view, common, style
+import doc, docview, view, common
 
 type
   SuggestionItem* = object
