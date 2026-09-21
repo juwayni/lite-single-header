@@ -7,7 +7,7 @@ type
   CommandDispatcher* = proc(cmdName: string): bool
 
 type
-  Keymap* = object
+  Keymap* = ref object
     modkeys*: Table[string, bool] # "ctrl", "alt", "altgr", "shift"
     map*: Table[string, seq[string]] # stroke -> sequence of command names
     reverseMap*: Table[string, string] # command name -> stroke
@@ -23,7 +23,7 @@ const ModKeyNameMap* = [
   ("right alt", "altgr")
 ]
 
-proc initKeymap*(): Keymap =
+proc newKeymap*(): Keymap =
   result = Keymap(
     modkeys: initTable[string, bool](),
     map: initTable[string, seq[string]](),
@@ -32,6 +32,9 @@ proc initKeymap*(): Keymap =
   for k in ModKeysList:
     result.modkeys[k] = false
 
+proc initKeymap*(): Keymap =
+  newKeymap()
+
 proc keyToStroke*(km: Keymap, key: string): string =
   var stroke = ""
   for mk in ModKeysList:
@@ -39,7 +42,7 @@ proc keyToStroke*(km: Keymap, key: string): string =
       stroke &= mk & "+"
   return stroke & key
 
-proc addBinding*(km: var Keymap, stroke: string, commands: openArray[string], overwrite: bool = false) =
+proc addBinding*(km: Keymap, stroke: string, commands: openArray[string], overwrite: bool = false) =
   let cmds = @commands
   if overwrite:
     km.map[stroke] = cmds
@@ -52,13 +55,13 @@ proc addBinding*(km: var Keymap, stroke: string, commands: openArray[string], ov
   for cmd in cmds:
     km.reverseMap[cmd] = stroke
 
-proc addBinding*(km: var Keymap, stroke: string, command: string, overwrite: bool = false) =
+proc addBinding*(km: Keymap, stroke: string, command: string, overwrite: bool = false) =
   km.addBinding(stroke, [command], overwrite)
 
 proc getBinding*(km: Keymap, command: string): string =
   return km.reverseMap.getOrDefault(command, "")
 
-proc onKeyPressed*(km: var Keymap, key: string, dispatcher: CommandDispatcher = nil): bool =
+proc onKeyPressed*(km: Keymap, key: string, dispatcher: CommandDispatcher = nil): bool =
   for (mkRaw, mkNormalized) in ModKeyNameMap:
     if key == mkRaw:
       km.modkeys[mkNormalized] = true
@@ -79,12 +82,12 @@ proc onKeyPressed*(km: var Keymap, key: string, dispatcher: CommandDispatcher = 
     return true
   return false
 
-proc onKeyReleased*(km: var Keymap, key: string) =
+proc onKeyReleased*(km: Keymap, key: string) =
   for (mkRaw, mkNormalized) in ModKeyNameMap:
     if key == mkRaw:
       km.modkeys[mkNormalized] = false
 
-proc addDefaultBindings*(km: var Keymap) =
+proc addDefaultBindings*(km: Keymap) =
   km.addBinding("ctrl+shift+p", "core:find-command")
   km.addBinding("ctrl+p", "core:find-file")
   km.addBinding("ctrl+o", "core:open-file")
