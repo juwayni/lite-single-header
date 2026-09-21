@@ -18,3 +18,4 @@ import test_node
 import test_rootview
 import test_commands
 import test_init
+import test_extended

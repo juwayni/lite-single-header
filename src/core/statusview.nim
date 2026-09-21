@@ -37,6 +37,9 @@ proc showTooltip*(self: StatusView, text: string) =
 proc removeTooltip*(self: StatusView) =
   self.tooltipMode = false
 
+method draw*(self: StatusView) =
+  self.drawBackground(defaultStyle.background2)
+
 method update*(self: StatusView): bool =
   self.size.y = defaultStyle.font.size + defaultStyle.padding.y * 2.0
   if epochTime() < self.messageTimeout:

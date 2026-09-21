@@ -28,6 +28,10 @@ proc openDoc*(self: RootView, doc: Doc): DocView =
   self.rootNode.updateLayout()
   return dv
 
+method draw*(self: RootView) =
+  if self.rootNode != nil:
+    self.rootNode.updateLayout()
+
 method update*(self: RootView): bool =
   self.rootNode.position = self.position
   self.rootNode.size = self.size

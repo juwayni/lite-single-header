@@ -2,7 +2,7 @@
 ## Ports data/core/commandview.lua to Nim.
 
 import std/strutils
-import doc, docview, view, common
+import doc, docview, view, common, style
 
 type
   SuggestionItem* = object
@@ -86,6 +86,13 @@ proc submit*(self: CommandView) =
   self.exit()
   if submitFn != nil:
     submitFn(currentText, sug)
+
+proc drawSuggestionsBox*(self: CommandView) =
+  discard
+
+method draw*(self: CommandView) =
+  procCall draw(DocView(self))
+  self.drawSuggestionsBox()
 
 method update*(self: CommandView): bool =
   if self.suggestProc != nil:

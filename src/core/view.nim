@@ -2,7 +2,7 @@
 ## Ports data/core/view.lua to Nim with structured OOP methods.
 
 import std/math
-import objects, common
+import objects, common, style
 
 type
   ScrollState* = object
@@ -102,6 +102,14 @@ method clampScrollPosition*(self: View) {.base.} =
     let maxScroll = max(0.0, sz - self.size.y)
     self.scroll.toY = clamp(self.scroll.toY, 0.0, maxScroll)
 
+method drawBackground*(self: View, color: Color) {.base.} =
+  discard
+
+method drawScrollbar*(self: View) {.base.} =
+  let r = self.getScrollbarRect()
+  if r.width > 0 and r.height > 0:
+    discard
+
 method update*(self: View): bool {.base.} =
   self.clampScrollPosition()
   let c1 = moveTowards(self.scroll.x, self.scroll.toX, 0.3)
@@ -109,4 +117,5 @@ method update*(self: View): bool {.base.} =
   return c1 or c2
 
 method draw*(self: View) {.base.} =
-  discard
+  self.drawBackground(defaultStyle.background)
+  self.drawScrollbar()

@@ -93,6 +93,38 @@ proc isDirty*(doc: Doc): bool =
 proc clean*(doc: Doc) =
   doc.cleanChangeId = doc.getChangeId()
 
+proc addSelection*(doc: Doc, line1, col1, line2, col2: int) =
+  let (l1, c1, l2, c2) = sortPositions(line1, col1, line2, col2)
+  doc.selections.add(Selection(line1: l1, col1: c1, line2: l2, col2: c2))
+
+proc setSelection*(doc: Doc, line1, col1: int, line2: int = 0, col2: int = 0) =
+  let l2 = if line2 == 0: line1 else: line2
+  let c2 = if col2 == 0: col1 else: col2
+  let (sl1, sc1, sl2, sc2) = sortPositions(line1, col1, l2, c2)
+  doc.selections = @[Selection(line1: sl1, col1: sc1, line2: sl2, col2: sc2)]
+
+proc getHighlightedLine*(doc: Doc, lineIdx: int): HighlightedLine =
+  let (l, _) = doc.sanitizePosition(lineIdx, 1)
+  if l <= doc.highlightedLines.len and doc.highlightedLines[l - 1].text == doc.lines[l - 1]:
+    return doc.highlightedLines[l - 1]
+
+  let lineText = doc.lines[l - 1]
+  let prevState = if l > 1 and l - 1 <= doc.highlightedLines.len: doc.highlightedLines[l - 2].state else: 0
+  let (toks, endState) = doc.syntax.tokenize(lineText, prevState)
+
+  let hl = HighlightedLine(
+    initState: prevState,
+    state: endState,
+    text: lineText,
+    tokens: toks
+  )
+
+  while doc.highlightedLines.len < l:
+    doc.highlightedLines.add(HighlightedLine())
+  doc.highlightedLines[l - 1] = hl
+
+  return hl
+
 proc getText*(doc: Doc, line1, col1, line2, col2: int): string =
   let (l1, c1) = doc.sanitizePosition(line1, col1)
   let (l2, c2) = doc.sanitizePosition(line2, col2)

@@ -1,7 +1,7 @@
 ## plugins_ui.nim - UI enhancement, console, macro, and status plugins
 ## Ports colorpreview.lua, console.lua, contextmenu.lua, lineguide.lua, macro.lua, markers.lua, motiontrail.lua, rainbowparen.lua, scale.lua, scalestatus.lua, todotreeview.lua.
 
-import ../core/[view, command, keymap]
+import ../core/[view, command, keymap, config]
 
 type
   ConsoleView* = ref object of View
@@ -16,23 +16,23 @@ proc newConsoleView*(): ConsoleView =
   cv.size.y = 150.0
   return cv
 
+proc appendLog*(cv: ConsoleView, msg: string) =
+  cv.buffer.add(msg)
+
 proc initUIPlugins*(reg: CommandRegistry, km: Keymap) =
+  reg.addCommand("scale:increase", proc() =
+    defaultConfig.lineHeight += 0.1
+  )
+
+  reg.addCommand("scale:decrease", proc() =
+    if defaultConfig.lineHeight > 0.5:
+      defaultConfig.lineHeight -= 0.1
+  )
+
   reg.addCommand("console:toggle", proc() =
-    # toggle embedded console
     discard
   )
 
   reg.addCommand("macro:record", proc() =
-    # record key sequence macro
-    discard
-  )
-
-  reg.addCommand("scale:increase", proc() =
-    # scale UI font size up
-    discard
-  )
-
-  reg.addCommand("scale:decrease", proc() =
-    # scale UI font size down
     discard
   )

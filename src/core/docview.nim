@@ -2,7 +2,7 @@
 ## Ports data/core/docview.lua to Nim.
 
 import std/math
-import common, config, style, view, doc
+import common, config, style, view, doc, tokenizer
 
 type
   DocView* = ref object of View
@@ -67,6 +67,29 @@ proc scrollToMakeVisible*(self: DocView, line, col: int) =
   let maxY = lh * float(line + 2) - self.size.y
   self.scroll.toY = min(self.scroll.toY, minY)
   self.scroll.toY = max(self.scroll.toY, maxY)
+
+proc drawLineGutter*(self: DocView, lineIdx: int, x, y: float) =
+  discard
+
+proc drawLineText*(self: DocView, lineIdx: int, x, y: float) =
+  if self.doc != nil:
+    let hl = self.doc.getHighlightedLine(lineIdx)
+    discard hl
+
+proc drawLineBody*(self: DocView, lineIdx: int, x, y: float) =
+  self.drawLineText(lineIdx, x, y)
+
+method draw*(self: DocView) =
+  self.drawBackground(defaultStyle.background)
+  let (minL, maxL) = self.getVisibleLineRange()
+  let lh = self.getLineHeight()
+  let pos = self.getLineScreenPosition(minL)
+  var curY = pos.y
+  for l in minL .. maxL:
+    self.drawLineGutter(l, self.position.x, curY)
+    self.drawLineBody(l, pos.x, curY)
+    curY += lh
+  self.drawScrollbar()
 
 method update*(self: DocView): bool =
   if self.doc != nil and self.doc.selections.len > 0:

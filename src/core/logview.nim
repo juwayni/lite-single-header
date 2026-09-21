@@ -2,7 +2,7 @@
 ## Ports data/core/logview.lua to Nim.
 
 import std/times
-import view
+import view, style
 
 type
   LogItem* = object
@@ -31,6 +31,10 @@ proc addLogItem*(self: LogView, text: string, at: string = "", info: string = ""
   self.items.add(LogItem(text: text, time: epochTime(), at: at, info: info))
   self.scroll.toY = 0.0
   self.yOffset = -20.0
+
+method draw*(self: LogView) =
+  self.drawBackground(defaultStyle.background)
+  self.drawScrollbar()
 
 method update*(self: LogView): bool =
   let c = moveTowards(self.yOffset, 0.0, 0.5)

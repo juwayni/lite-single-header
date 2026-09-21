@@ -5,7 +5,11 @@ import ../command, ../keymap, ../doc, ../docview, ../commandview, ../node, ../ro
 
 proc registerCoreCommands*(reg: CommandRegistry, km: Keymap, rv: RootView, cv: CommandView) =
   reg.addCommand("core:quit", proc() =
-    discard
+    quit(0)
+  )
+
+  reg.addCommand("core:force-quit", proc() =
+    quit(0)
   )
 
   reg.addCommand("core:new-doc", proc() =
@@ -48,6 +52,23 @@ proc registerCoreCommands*(reg: CommandRegistry, km: Keymap, rv: RootView, cv: C
         dv.doc.redo()
   )
 
+  reg.addCommand("doc:select-all", proc() =
+    if rv.rootNode != nil and rv.rootNode.activeView != nil and rv.rootNode.activeView of DocView:
+      let dv = DocView(rv.rootNode.activeView)
+      if dv.doc != nil:
+        let lineCount = dv.doc.lines.len
+        let lastLineLen = if lineCount > 0: dv.doc.lines[^1].len else: 1
+        dv.doc.setSelection(1, 1, lineCount, lastLineLen)
+  )
+
+  reg.addCommand("doc:select-none", proc() =
+    if rv.rootNode != nil and rv.rootNode.activeView != nil and rv.rootNode.activeView of DocView:
+      let dv = DocView(rv.rootNode.activeView)
+      if dv.doc != nil and dv.doc.selections.len > 0:
+        let sel = dv.doc.selections[0]
+        dv.doc.setSelection(sel.line1, sel.col1)
+  )
+
   reg.addCommand("find-replace:find", proc() =
     cv.enter("Find Text", proc(text: string, sug: SuggestionItem) =
       if rv.rootNode != nil and rv.rootNode.activeView != nil and rv.rootNode.activeView of DocView:
@@ -69,4 +90,10 @@ proc registerCoreCommands*(reg: CommandRegistry, km: Keymap, rv: RootView, cv: C
     if rv.rootNode != nil:
       discard rv.rootNode.split("down")
       rv.rootNode.updateLayout()
+  )
+
+  reg.addCommand("root:close", proc() =
+    if rv.rootNode != nil and rv.rootNode.activeView != nil:
+      # close view
+      discard
   )
