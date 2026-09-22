@@ -79,6 +79,12 @@ proc getChangeId*(doc: Doc): int = doc.undoStack.len
 proc isDirty*(doc: Doc): bool = doc.cleanChangeId != doc.getChangeId()
 proc clean*(doc: Doc) = doc.cleanChangeId = doc.getChangeId()
 
+proc addSelection*(doc: Doc, line1, col1: int, line2: int = 0, col2: int = 0) =
+  let l2 = if line2 == 0: line1 else: line2
+  let c2 = if col2 == 0: col1 else: col2
+  let (sl1, sc1, sl2, sc2) = sortPositions(line1, col1, l2, c2)
+  doc.selections.add(Selection(line1: sl1, col1: sc1, line2: sl2, col2: sc2))
+
 proc setSelection*(doc: Doc, line1, col1: int, line2: int = 0, col2: int = 0) =
   let l2 = if line2 == 0: line1 else: line2
   let c2 = if col2 == 0: col1 else: col2
@@ -176,10 +182,20 @@ proc deleteToCursor*(doc: Doc, dirCol: int = -1) =
       doc.remove(sel.line1, sel.col1, sel.line2, sel.col2)
       doc.selections[i] = Selection(line1: sel.line1, col1: sel.col1, line2: sel.line1, col2: sel.col1)
     else:
-      let targetCol = max(1, sel.col1 + dirCol)
-      doc.remove(sel.line1, min(sel.col1, targetCol), sel.line1, max(sel.col1, targetCol))
-      let newC = min(sel.col1, targetCol)
-      doc.selections[i] = Selection(line1: sel.line1, col1: newC, line2: sel.line1, col2: newC)
+      if dirCol < 0:
+        if sel.col1 > 1:
+          doc.remove(sel.line1, sel.col1 - 1, sel.line1, sel.col1)
+          doc.selections[i] = Selection(line1: sel.line1, col1: sel.col1 - 1, line2: sel.line1, col2: sel.col1 - 1)
+        elif sel.line1 > 1:
+          let prevLineLen = doc.lines[sel.line1 - 2].len
+          doc.remove(sel.line1 - 1, prevLineLen, sel.line1, 1)
+          doc.selections[i] = Selection(line1: sel.line1 - 1, col1: prevLineLen, line2: sel.line1 - 1, col2: prevLineLen)
+      elif dirCol > 0:
+        let curLineLen = doc.lines[sel.line1 - 1].len
+        if sel.col1 < curLineLen:
+          doc.remove(sel.line1, sel.col1, sel.line1, sel.col1 + 1)
+        elif sel.line1 < doc.lines.len:
+          doc.remove(sel.line1, curLineLen, sel.line1 + 1, 1)
 
 proc getSelectedText*(doc: Doc): string =
   var parts: seq[string] = @[]
