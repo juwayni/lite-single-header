@@ -1,8 +1,8 @@
 ## plugins_nav.nim - Core navigation & workspace plugins
 ## Ports autocomplete.lua, autoreload.lua, closeconfirmx.lua, fsutils.lua, minimap.lua, openfilelocation.lua, projectsearch.lua, treeview.lua, workspace.lua.
 
-import std/os
-import ../core/[view, command, keymap, node, rootview]
+import std/[os, strutils]
+import ../core/[view, command, keymap, node, rootview, commandview, doc, docview]
 
 type
   TreeViewNode* = object
@@ -38,7 +38,7 @@ proc buildDirectoryTree*(path: string): TreeViewNode =
         node.children.add(TreeViewNode(filename: full, isDir: false, expanded: false, children: @[]))
   return node
 
-proc initNavigationPlugins*(reg: CommandRegistry, km: Keymap, rv: RootView, tv: TreeView) =
+proc initNavigationPlugins*(reg: CommandRegistry, km: Keymap, rv: RootView, tv: TreeView, cv: CommandView = nil) =
   reg.addCommand("treeview:toggle", proc() =
     tv.visible = not tv.visible
     tv.size.x = if tv.visible: 200.0 else: 0.0
@@ -47,9 +47,33 @@ proc initNavigationPlugins*(reg: CommandRegistry, km: Keymap, rv: RootView, tv: 
   )
 
   reg.addCommand("project-search:find", proc() =
-    discard
+    if cv != nil:
+      cv.enter("Project Search", proc(needle: string, sug: SuggestionItem) =
+        if needle.len > 0 and rv != nil:
+          let resultsDoc = newDoc("Project Search Results")
+          for path in walkDirRec(".", yieldFilter = {pcFile}):
+            if fileExists(path):
+              try:
+                let content = readFile(path)
+                let lines = content.splitLines()
+                for i, l in lines:
+                  if needle in l:
+                    resultsDoc.lines.add(path & ":" & $(i + 1) & ": " & l & "\n")
+              except IOError:
+                discard
+          discard rv.openDoc(resultsDoc)
+      )
   )
 
   reg.addCommand("workspace:save", proc() =
-    discard
+    var session: seq[string] = @[]
+    if rv != nil and rv.rootNode != nil:
+      for v in rv.rootNode.views:
+        if v of DocView and DocView(v).doc != nil and DocView(v).doc.filename.len > 0:
+          session.add(DocView(v).doc.filename)
+    if session.len > 0:
+      try:
+        writeFile(".lite_workspace.session", session.join("\n"))
+      except IOError:
+        discard
   )

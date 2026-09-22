@@ -4,6 +4,8 @@
 import std/strutils
 import ../command, ../keymap, ../doc, ../docview, ../commandview, ../node, ../rootview, ../common, ../config
 
+var lastFindText*: string = ""
+
 proc registerCoreCommands*(reg: CommandRegistry, km: Keymap, rv: RootView, cv: CommandView) =
   reg.addCommand("core:quit", proc() =
     quit(0)
@@ -85,15 +87,21 @@ proc registerCoreCommands*(reg: CommandRegistry, km: Keymap, rv: RootView, cv: C
     if rv.rootNode != nil and rv.rootNode.activeView != nil and rv.rootNode.activeView of DocView:
       let dv = DocView(rv.rootNode.activeView)
       if dv.doc != nil:
-        dv.doc.deleteToCursor(0)
+        dv.doc.cutSelectionToClipboard()
   )
 
   reg.addCommand("doc:copy", proc() =
-    discard
+    if rv.rootNode != nil and rv.rootNode.activeView != nil and rv.rootNode.activeView of DocView:
+      let dv = DocView(rv.rootNode.activeView)
+      if dv.doc != nil:
+        dv.doc.copySelectionToClipboard()
   )
 
   reg.addCommand("doc:paste", proc() =
-    discard
+    if rv.rootNode != nil and rv.rootNode.activeView != nil and rv.rootNode.activeView of DocView:
+      let dv = DocView(rv.rootNode.activeView)
+      if dv.doc != nil:
+        dv.doc.pasteFromClipboard()
   )
 
   reg.addCommand("doc:newline", proc() =
@@ -168,6 +176,7 @@ proc registerCoreCommands*(reg: CommandRegistry, km: Keymap, rv: RootView, cv: C
       if rv.rootNode != nil and rv.rootNode.activeView != nil and rv.rootNode.activeView of DocView:
         let dv = DocView(rv.rootNode.activeView)
         if dv.doc != nil and text.len > 0:
+          lastFindText = text
           let (l1, c1, l2, c2) = dv.doc.searchFind(1, 1, text)
           if l1 > 0:
             dv.doc.selections = @[Selection(line1: l1, col1: c1, line2: l2, col2: c2)]
@@ -175,13 +184,29 @@ proc registerCoreCommands*(reg: CommandRegistry, km: Keymap, rv: RootView, cv: C
   )
 
   reg.addCommand("find-replace:replace", proc() =
-    cv.enter("Replace Text With", proc(text: string, sug: SuggestionItem) =
-      discard
+    cv.enter("Find To Replace", proc(oldText: string, sug: SuggestionItem) =
+      if oldText.len > 0:
+        cv.enter("Replace With", proc(newText: string, sug2: SuggestionItem) =
+          if rv.rootNode != nil and rv.rootNode.activeView != nil and rv.rootNode.activeView of DocView:
+            let dv = DocView(rv.rootNode.activeView)
+            if dv.doc != nil:
+              let (l1, c1, l2, c2) = dv.doc.searchFind(1, 1, oldText)
+              if l1 > 0:
+                dv.doc.remove(l1, c1, l2, c2)
+                dv.doc.insert(l1, c1, newText)
+        )
     )
   )
 
   reg.addCommand("find-replace:repeat-find", proc() =
-    discard
+    if rv.rootNode != nil and rv.rootNode.activeView != nil and rv.rootNode.activeView of DocView:
+      let dv = DocView(rv.rootNode.activeView)
+      if dv.doc != nil and lastFindText.len > 0:
+        let startL = if dv.doc.selections.len > 0: dv.doc.selections[0].line2 else: 1
+        let startC = if dv.doc.selections.len > 0: dv.doc.selections[0].col2 else: 1
+        let (l1, c1, l2, c2) = dv.doc.searchFind(startL, startC, lastFindText)
+        if l1 > 0:
+          dv.doc.selections = @[Selection(line1: l1, col1: c1, line2: l2, col2: c2)]
   )
 
   reg.addCommand("root:split-right", proc() =
@@ -198,5 +223,7 @@ proc registerCoreCommands*(reg: CommandRegistry, km: Keymap, rv: RootView, cv: C
 
   reg.addCommand("root:close", proc() =
     if rv.rootNode != nil and rv.rootNode.activeView != nil:
-      discard
+      if rv.rootNode.views.len > 1:
+        rv.rootNode.views.setLen(rv.rootNode.views.len - 1)
+        rv.rootNode.activeView = rv.rootNode.views[^1]
   )

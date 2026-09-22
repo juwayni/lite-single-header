@@ -15,6 +15,14 @@ type
     text*: string
     score*: int
 
+var systemClipboardText*: string = ""
+
+proc setClipboardText*(text: string) =
+  systemClipboardText = text
+
+proc getClipboardText*(): string =
+  return systemClipboardText
+
 proc initVec2*(x, y: float): Vec2 = Vec2(x: x, y: y)
 proc initRect*(x, y, w, h: float): Rect = Rect(x: x, y: y, width: w, height: h)
 proc initColor*(r, g, b: float, a: float = 255.0): Color = Color(r: r, g: g, b: b, a: a)

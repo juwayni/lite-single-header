@@ -1,6 +1,6 @@
 ## node.nim - Split layout node
 import std/math
-import objects, common, view
+import objects, common, view, style, renderer
 
 type
   NodeType* = enum ntLeaf, ntHSplit, ntVSplit
@@ -56,6 +56,20 @@ proc updateLayout*(self: Node) =
         self.childA.position = self.position; self.childA.size = initVec2(splitX, self.size.y); self.childA.updateLayout()
       if self.childB != nil:
         self.childB.position = initVec2(self.position.x + splitX, self.position.y); self.childB.size = initVec2(self.size.x - splitX, self.size.y); self.childB.updateLayout()
+    elif self.nodeType == ntVSplit:
+      let splitY = floor(self.size.y * self.divider)
+      if self.childA != nil:
+        self.childA.position = self.position; self.childA.size = initVec2(self.size.x, splitY); self.childA.updateLayout()
+      if self.childB != nil:
+        self.childB.position = initVec2(self.position.x, self.position.y + splitY); self.childB.size = initVec2(self.size.x, self.size.y - splitY); self.childB.updateLayout()
+
+method draw*(self: Node) {.base.} =
+  if self.nodeType == ntLeaf:
+    if self.activeView != nil:
+      self.activeView.draw()
+  else:
+    if self.childA != nil: self.childA.draw()
+    if self.childB != nil: self.childB.draw()
 
 method update*(self: Node): bool {.base.} =
   var changed = false

@@ -181,6 +181,27 @@ proc deleteToCursor*(doc: Doc, dirCol: int = -1) =
       let newC = min(sel.col1, targetCol)
       doc.selections[i] = Selection(line1: sel.line1, col1: newC, line2: sel.line1, col2: newC)
 
+proc getSelectedText*(doc: Doc): string =
+  var parts: seq[string] = @[]
+  for sel in doc.selections:
+    if sel.line1 != sel.line2 or sel.col1 != sel.col2:
+      parts.add(doc.getText(sel.line1, sel.col1, sel.line2, sel.col2))
+  return parts.join("\n")
+
+proc copySelectionToClipboard*(doc: Doc) =
+  let txt = doc.getSelectedText()
+  if txt.len > 0:
+    setClipboardText(txt)
+
+proc cutSelectionToClipboard*(doc: Doc) =
+  doc.copySelectionToClipboard()
+  doc.deleteToCursor(0)
+
+proc pasteFromClipboard*(doc: Doc) =
+  let txt = getClipboardText()
+  if txt.len > 0:
+    doc.textInput(txt)
+
 proc undo*(doc: Doc) =
   if doc.undoStack.len > 0:
     let rec = doc.undoStack.pop()

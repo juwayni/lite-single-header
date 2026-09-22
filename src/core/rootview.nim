@@ -1,17 +1,21 @@
 ## rootview.nim - Root top-level view orchestration and node tree layout container
 ## Ports data/core/rootview.lua to Nim.
 
-import view, node, doc, docview, common, renderer
+import view, node, doc, docview, commandview, statusview, common, renderer
 
 type
   RootView* = ref object of View
     rootNode*: Node
+    commandView*: CommandView
+    statusView*: StatusView
     mouse*: Vec2
 
 proc newRootView*(): RootView =
   let rv = RootView(
     typeName: "RootView",
     rootNode: newNode(ntLeaf),
+    commandView: nil,
+    statusView: nil,
     mouse: initVec2(0.0, 0.0)
   )
   return rv
@@ -32,11 +36,17 @@ method draw*(self: RootView) =
   renderer.setClipRect(initRect(self.position.x, self.position.y, self.size.x, self.size.y))
   if self.rootNode != nil:
     self.rootNode.updateLayout()
-    if self.rootNode.activeView != nil:
-      self.rootNode.activeView.draw()
+    self.rootNode.draw()
+  if self.statusView != nil:
+    self.statusView.draw()
+  if self.commandView != nil:
+    self.commandView.draw()
 
 method update*(self: RootView): bool =
   self.rootNode.position = self.position
   self.rootNode.size = self.size
   self.rootNode.updateLayout()
-  return self.rootNode.update()
+  var changed = self.rootNode.update()
+  if self.statusView != nil and self.statusView.update(): changed = true
+  if self.commandView != nil and self.commandView.update(): changed = true
+  return changed
