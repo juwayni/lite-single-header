@@ -79,9 +79,13 @@ proc drawLineText*(self: DocView, lineIdx: int, x, y: float) =
     let font = defaultStyle.codeFont
     let hl = self.doc.getHighlightedLine(lineIdx)
     var curX = x
-    for tok in hl.tokens:
-      let tokColor = defaultStyle.syntax.getOrDefault(tok.tokenType, defaultStyle.text)
-      curX = renderer.drawText(font, tok.text, curX, y, tokColor)
+    if hl.tokens.len > 0:
+      for tok in hl.tokens:
+        let tokColor = defaultStyle.syntax.getOrDefault(tok.tokenType, defaultStyle.text)
+        curX = renderer.drawText(font, tok.text, curX, y, tokColor)
+    else:
+      let rawText = self.doc.lines[lineIdx - 1]
+      discard renderer.drawText(font, rawText, curX, y, defaultStyle.text)
 
 proc drawLineBody*(self: DocView, lineIdx: int, x, y: float) =
   if self.doc != nil:
@@ -102,13 +106,13 @@ proc drawLineBody*(self: DocView, lineIdx: int, x, y: float) =
 
 method draw*(self: DocView) =
   self.drawBackground(defaultStyle.background)
-  let (minL, maxL) = self.getVisibleLineRange()
+  let (minL, maxL) = (1, if self.doc != nil: self.doc.lines.len else: 1)
   let lh = self.getLineHeight()
-  let pos = self.getLineScreenPosition(minL)
-  var curY = pos.y
+  let gw = self.getGutterWidth()
+  var curY = self.position.y + defaultStyle.padding.y
   for l in minL .. maxL:
     self.drawLineGutter(l, self.position.x, curY)
-    self.drawLineBody(l, pos.x, curY)
+    self.drawLineBody(l, self.position.x + gw, curY)
     curY += lh
   self.drawScrollbar()
 
